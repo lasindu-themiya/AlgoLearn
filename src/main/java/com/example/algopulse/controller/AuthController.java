@@ -2,6 +2,7 @@ package com.example.algopulse.controller;
 
 import com.example.algopulse.dto.AuthRequest;
 import com.example.algopulse.service.AuthService;
+import com.example.algopulse.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping("/test")
     public ResponseEntity<Map<String, Object>> test() {
@@ -91,9 +95,22 @@ public class AuthController {
             }
             
             String token = authService.loginUser(usernameOrEmail, request.getPassword());
-            response.put("success", true);
+            
+            // Get user information to return with the token (same lookup as in loginUser)
+            var userOptional = userRepository.findByUsername(usernameOrEmail);
+            if (userOptional.isEmpty()) {
+                userOptional = userRepository.findByEmail(usernameOrEmail);
+            }
+            var user = userOptional.get(); // We know it exists since login was successful
+            
+            // Create user response object (exclude sensitive information)
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("id", user.getId());
+            userResponse.put("username", user.getUsername());  
+            userResponse.put("email", user.getEmail());            response.put("success", true);
             response.put("message", "Login successful");
             response.put("token", token);
+            response.put("user", userResponse);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);

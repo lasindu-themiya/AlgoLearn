@@ -332,46 +332,45 @@ public class QueueService {
         }
         
         QueueSession session = sessionOpt.get();
-        List<Map<String, Object>> queueView = new ArrayList<>();
+        List<Integer> elements = new ArrayList<>();
         
         if ("static".equals(session.getType())) {
-            // For static queue, show elements from front to rear
+            // For static queue, get elements from front to rear in order
             if (session.getCurrentSize() > 0) {
                 int current = session.getFront();
                 for (int i = 0; i < session.getCurrentSize(); i++) {
-                    Map<String, Object> element = new HashMap<>();
-                    element.put("position", i);
-                    element.put("data", session.getElements().get(current));
-                    element.put("isFront", i == 0);
-                    element.put("isRear", i == session.getCurrentSize() - 1);
-                    element.put("index", current);
-                    queueView.add(element);
+                    elements.add(session.getElements().get(current));
                     current = (current + 1) % session.getMaxSize();
                 }
             }
         } else {
-            // For dynamic queue, traverse from front to rear
-            List<QueueNode> nodes = 
-                nodeRepository.findBySessionIdAndUserIdOrderByPosition(session.getSessionId(), session.getUserId());
-            
-            for (QueueNode node : nodes) {
-                Map<String, Object> nodeInfo = new HashMap<>();
-                nodeInfo.put("id", node.getId());
-                nodeInfo.put("data", node.getData());
-                nodeInfo.put("position", node.getPosition());
-                nodeInfo.put("isFront", node.isFront());
-                nodeInfo.put("isRear", node.isRear());
-                nodeInfo.put("nextNodeId", node.getNextNodeId());
-                queueView.add(nodeInfo);
+            // For dynamic queue, traverse nodes from front to rear
+            if (!session.getNodeIds().isEmpty()) {
+                for (String nodeId : session.getNodeIds()) {
+                    Optional<QueueNode> nodeOpt = nodeRepository.findById(nodeId);
+                    if (nodeOpt.isPresent()) {
+                        elements.add(nodeOpt.get().getData());
+                    }
+                }
             }
         }
         
-        result.put("success", true);
-        result.put("session", session);
-        result.put("queue", queueView);
-        result.put("size", session.getCurrentSize());
-        result.put("maxSize", session.getMaxSize());
+        // Create response with session data and elements
+        Map<String, Object> sessionData = new HashMap<>();
+        sessionData.put("id", session.getId());
+        sessionData.put("sessionId", session.getSessionId());
+        sessionData.put("userId", session.getUserId());
+        sessionData.put("name", session.getSessionId()); // Using sessionId as name for now
+        sessionData.put("type", session.getType());
+        sessionData.put("size", session.getCurrentSize());
+        sessionData.put("maxSize", session.getMaxSize());
+        sessionData.put("elements", elements);
+        sessionData.put("createdAt", session.getCreatedAt());
+        sessionData.put("updatedAt", session.getUpdatedAt());
         
+        result.put("success", true);
+        result.put("message", "Queue retrieved successfully");
+        result.put("data", sessionData);
         return result;
     }
 

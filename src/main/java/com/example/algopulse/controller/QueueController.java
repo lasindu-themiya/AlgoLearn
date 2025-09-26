@@ -46,7 +46,7 @@ public class QueueController {
             
             response.put("success", true);
             response.put("message", type + " queue created successfully");
-            response.put("session", session);
+            response.put("data", session);
             
             return ResponseEntity.ok(response);
             
@@ -160,7 +160,7 @@ public class QueueController {
         try {
             var sessions = queueService.getUserSessions(userId);
             response.put("success", true);
-            response.put("sessions", sessions);
+            response.put("data", sessions);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

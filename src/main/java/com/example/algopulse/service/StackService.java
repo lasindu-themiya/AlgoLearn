@@ -288,39 +288,39 @@ public class StackService {
         }
         
         StackSession session = sessionOpt.get();
-        List<Map<String, Object>> stackView = new ArrayList<>();
+        List<Integer> elements = new ArrayList<>();
         
         if ("static".equals(session.getType())) {
-            // For static stack, show elements from top to bottom
-            for (int i = session.getElements().size() - 1; i >= 0; i--) {
-                Map<String, Object> element = new HashMap<>();
-                element.put("position", i);
-                element.put("data", session.getElements().get(i));
-                element.put("isTop", i == session.getElements().size() - 1);
-                stackView.add(element);
-            }
+            // For static stack, elements are stored directly
+            elements = new ArrayList<>(session.getElements());
         } else {
-            // For dynamic stack, traverse from top to bottom
-            List<StackNode> nodes = 
-                nodeRepository.findBySessionIdAndUserIdOrderByPositionDesc(session.getSessionId(), session.getUserId());
-            
-            for (StackNode node : nodes) {
-                Map<String, Object> nodeInfo = new HashMap<>();
-                nodeInfo.put("id", node.getId());
-                nodeInfo.put("data", node.getData());
-                nodeInfo.put("position", node.getPosition());
-                nodeInfo.put("isTop", node.isTop());
-                nodeInfo.put("nextNodeId", node.getNextNodeId());
-                stackView.add(nodeInfo);
+            // For dynamic stack, traverse nodes from bottom to top
+            if (!session.getNodeIds().isEmpty()) {
+                for (String nodeId : session.getNodeIds()) {
+                    Optional<StackNode> nodeOpt = nodeRepository.findById(nodeId);
+                    if (nodeOpt.isPresent()) {
+                        elements.add(nodeOpt.get().getData());
+                    }
+                }
             }
         }
         
-        result.put("success", true);
-        result.put("session", session);
-        result.put("stack", stackView);
-        result.put("size", session.getCurrentSize());
-        result.put("maxSize", session.getMaxSize());
+        // Create response with session data and elements
+        Map<String, Object> sessionData = new HashMap<>();
+        sessionData.put("id", session.getId());
+        sessionData.put("sessionId", session.getSessionId());
+        sessionData.put("userId", session.getUserId());
+        sessionData.put("name", session.getSessionId()); // Using sessionId as name for now
+        sessionData.put("type", session.getType());
+        sessionData.put("size", session.getCurrentSize());
+        sessionData.put("maxSize", session.getMaxSize());
+        sessionData.put("elements", elements);
+        sessionData.put("createdAt", session.getCreatedAt());
+        sessionData.put("updatedAt", session.getUpdatedAt());
         
+        result.put("success", true);
+        result.put("message", "Stack retrieved successfully");
+        result.put("data", sessionData);
         return result;
     }
 
