@@ -13,5 +13,6 @@ public interface SinglyLinkedListNodeRepository extends MongoRepository<SinglyLi
     Optional<SinglyLinkedListNode> findBySessionIdAndUserIdAndIsHeadTrue(String sessionId, String userId);
     Optional<SinglyLinkedListNode> findBySessionIdAndUserIdAndData(String sessionId, String userId, int data);
     void deleteBySessionIdAndUserId(String sessionId, String userId);
+    void deleteBySessionId(String sessionId);
     long countBySessionIdAndUserId(String sessionId, String userId);
 }

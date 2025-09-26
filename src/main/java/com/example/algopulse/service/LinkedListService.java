@@ -747,20 +747,55 @@ public class LinkedListService {
         }
         
         LinkedListSession session = sessionOpt.get();
+        List<Integer> elements = new ArrayList<>();
         
-        if (session.getSize() == 0) {
-            result.put("success", true);
-            result.put("message", "List is empty");
-            result.put("list", new ArrayList<>());
-            result.put("size", 0);
-            return result;
+        // Traverse the linked list to get all elements in order
+        if (session.getHeadNodeId() != null) {
+            if ("singly".equals(session.getType())) {
+                // Traverse singly linked list
+                Optional<SinglyLinkedListNode> currentOpt = singlyNodeRepository.findById(session.getHeadNodeId());
+                while (currentOpt.isPresent()) {
+                    SinglyLinkedListNode current = currentOpt.get();
+                    elements.add(current.getData());
+                    
+                    if (current.getNextNodeId() != null) {
+                        currentOpt = singlyNodeRepository.findById(current.getNextNodeId());
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                // Traverse doubly linked list
+                Optional<DoublyLinkedListNode> currentOpt = doublyNodeRepository.findById(session.getHeadNodeId());
+                while (currentOpt.isPresent()) {
+                    DoublyLinkedListNode current = currentOpt.get();
+                    elements.add(current.getData());
+                    
+                    if (current.getNextNodeId() != null) {
+                        currentOpt = doublyNodeRepository.findById(current.getNextNodeId());
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
         
-        if ("singly".equals(session.getType())) {
-            return viewSinglyList(session);
-        } else {
-            return viewDoublyList(session);
-        }
+        // Create response with session data and elements
+        Map<String, Object> sessionData = new HashMap<>();
+        sessionData.put("id", session.getId());
+        sessionData.put("sessionId", session.getSessionId());
+        sessionData.put("userId", session.getUserId());
+        sessionData.put("name", session.getSessionId()); // Using sessionId as name for now
+        sessionData.put("type", session.getType());
+        sessionData.put("size", session.getSize());
+        sessionData.put("elements", elements);
+        sessionData.put("createdAt", session.getCreatedAt());
+        sessionData.put("updatedAt", session.getUpdatedAt());
+        
+        result.put("success", true);
+        result.put("message", "List retrieved successfully");
+        result.put("data", sessionData);
+        return result;
     }
 
     private Map<String, Object> viewSinglyList(LinkedListSession session) {
@@ -1068,6 +1103,50 @@ public class LinkedListService {
         result.put("deletedData", deletedData);
         result.put("size", session.getSize());
         return result;
+    }
+
+    // Clear/Reset LinkedList (remove all elements)
+    public Map<String, Object> clearLinkedList(String sessionId, String userId) {
+        Map<String, Object> result = new HashMap<>();
+        
+        Optional<LinkedListSession> sessionOpt = sessionRepository.findBySessionIdAndUserId(sessionId, userId);
+        if (sessionOpt.isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Session not found");
+            return result;
+        }
+        
+        LinkedListSession session = sessionOpt.get();
+        
+        try {
+            if ("singly".equals(session.getType())) {
+                // Clear all singly linked list nodes
+                singlyNodeRepository.deleteBySessionId(sessionId);
+            } else {
+                // Clear all doubly linked list nodes
+                doublyNodeRepository.deleteBySessionId(sessionId);
+            }
+            
+            // Reset session properties
+            session.setHeadNodeId(null);
+            session.setTailNodeId(null);
+            session.setSize(0);
+            session.getNodeIds().clear();
+            session.getOperationHistory().clear();
+            session.setUpdatedAt(System.currentTimeMillis());
+            
+            sessionRepository.save(session);
+            
+            result.put("success", true);
+            result.put("message", "LinkedList cleared successfully");
+            result.put("size", 0);
+            return result;
+            
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "Error clearing LinkedList: " + e.getMessage());
+            return result;
+        }
     }
 
     // Get all user sessions

@@ -14,5 +14,6 @@ public interface DoublyLinkedListNodeRepository extends MongoRepository<DoublyLi
     Optional<DoublyLinkedListNode> findBySessionIdAndUserIdAndIsTailTrue(String sessionId, String userId);
     Optional<DoublyLinkedListNode> findBySessionIdAndUserIdAndData(String sessionId, String userId, int data);
     void deleteBySessionIdAndUserId(String sessionId, String userId);
+    void deleteBySessionId(String sessionId);
     long countBySessionIdAndUserId(String sessionId, String userId);
 }

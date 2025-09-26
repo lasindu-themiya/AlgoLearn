@@ -42,7 +42,7 @@ public class LinkedListController {
             
             response.put("success", true);
             response.put("message", type + " linked list created successfully");
-            response.put("session", session);
+            response.put("data", session);
             
             return ResponseEntity.ok(response);
             
@@ -274,7 +274,7 @@ public class LinkedListController {
         try {
             var sessions = linkedListService.getUserSessions(userId);
             response.put("success", true);
-            response.put("sessions", sessions);
+            response.put("data", sessions);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
@@ -290,13 +290,53 @@ public class LinkedListController {
                                                            @RequestAttribute("userId") String userId) {
         try {
             String sessionId = (String) request.get("sessionId");
-            Integer value = (Integer) request.get("value");
-            Integer index = (Integer) request.get("index");
+            Object valueObj = request.get("value");
+            Object indexObj = request.get("index");
             
-            if (sessionId == null || value == null || index == null) {
+            if (sessionId == null || valueObj == null || indexObj == null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Missing required parameters: sessionId, value, and index");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Handle value conversion
+            Integer value;
+            if (valueObj instanceof String) {
+                try {
+                    value = Integer.parseInt((String) valueObj);
+                } catch (NumberFormatException e) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "Value must be a valid integer");
+                    return ResponseEntity.badRequest().body(response);
+                }
+            } else if (valueObj instanceof Integer) {
+                value = (Integer) valueObj;
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Value must be an integer");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Handle index conversion
+            Integer index;
+            if (indexObj instanceof String) {
+                try {
+                    index = Integer.parseInt((String) indexObj);
+                } catch (NumberFormatException e) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "Index must be a valid integer");
+                    return ResponseEntity.badRequest().body(response);
+                }
+            } else if (indexObj instanceof Integer) {
+                index = (Integer) indexObj;
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Index must be an integer");
                 return ResponseEntity.badRequest().body(response);
             }
             
@@ -332,6 +372,36 @@ public class LinkedListController {
             }
             
             Map<String, Object> result = linkedListService.removeAtGivenIndex(sessionId, userId, index);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Clear/Reset LinkedList (remove all elements)
+    @PostMapping("/clear")
+    public ResponseEntity<Map<String, Object>> clearLinkedList(@RequestBody Map<String, Object> request,
+                                                              @RequestAttribute("userId") String userId) {
+        try {
+            String sessionId = (String) request.get("sessionId");
+            
+            if (sessionId == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Missing required parameter: sessionId");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Map<String, Object> result = linkedListService.clearLinkedList(sessionId, userId);
             
             if ((Boolean) result.get("success")) {
                 return ResponseEntity.ok(result);
