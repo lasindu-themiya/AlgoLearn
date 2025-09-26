@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/linkedlist/**").authenticated()
                 .requestMatchers("/api/stack/**").authenticated()
                 .requestMatchers("/api/queue/**").authenticated()
+                // Protected endpoints - all algorithm operations require authentication
+                .requestMatchers("/api/sort/**").authenticated()
+                .requestMatchers("/api/search/**").authenticated()
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
