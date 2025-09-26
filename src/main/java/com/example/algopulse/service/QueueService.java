@@ -106,8 +106,6 @@ public class QueueService {
             // First node is both front and rear
             newNode.setFront(true);
             newNode.setRear(true);
-            session.setFrontNodeId(newNode.getId());
-            session.setRearNodeId(newNode.getId());
         } else {
             // Add to rear
             Optional<QueueNode> currentRearOpt = 
@@ -116,15 +114,31 @@ public class QueueService {
             if (currentRearOpt.isPresent()) {
                 QueueNode currentRear = currentRearOpt.get();
                 currentRear.setRear(false);
-                currentRear.setNextNodeId(newNode.getId());
                 nodeRepository.save(currentRear);
             }
             
             newNode.setRear(true);
-            session.setRearNodeId(newNode.getId());
         }
         
         QueueNode savedNode = nodeRepository.save(newNode);
+        
+        // Now set the IDs after saving
+        if (session.getCurrentSize() == 0) {
+            session.setFrontNodeId(savedNode.getId());
+            session.setRearNodeId(savedNode.getId());
+        } else {
+            // Update the previous rear node to point to this new node
+            Optional<QueueNode> currentRearOpt = 
+                nodeRepository.findBySessionIdAndUserIdAndIsRearTrue(session.getSessionId(), session.getUserId());
+            
+            if (currentRearOpt.isPresent()) {
+                QueueNode currentRear = currentRearOpt.get();
+                currentRear.setNextNodeId(savedNode.getId());
+                nodeRepository.save(currentRear);
+            }
+            
+            session.setRearNodeId(savedNode.getId());
+        }
         
         // Update session
         session.setCurrentSize(session.getCurrentSize() + 1);
@@ -211,7 +225,7 @@ public class QueueService {
         Map<String, Object> result = new HashMap<>();
         
         // Check if queue is empty
-        if (session.getCurrentSize() == 0 || session.getFrontNodeId() == null) {
+        if (session.getCurrentSize() == 0) {
             result.put("success", false);
             result.put("message", "Queue underflow - queue is empty");
             session.getOperationHistory().add(
@@ -221,8 +235,8 @@ public class QueueService {
             return result;
         }
         
-        // Get current front node
-        Optional<QueueNode> frontNodeOpt = nodeRepository.findById(session.getFrontNodeId());
+        // Get current front node by finding the node marked as front
+        Optional<QueueNode> frontNodeOpt = nodeRepository.findBySessionIdAndUserIdAndIsFrontTrue(session.getSessionId(), session.getUserId());
         if (frontNodeOpt.isEmpty()) {
             result.put("success", false);
             result.put("message", "Queue corruption - front node not found");
@@ -304,7 +318,8 @@ public class QueueService {
             result.put("data", frontData);
             result.put("message", "Front element: " + frontData);
         } else {
-            Optional<QueueNode> frontNodeOpt = nodeRepository.findById(session.getFrontNodeId());
+            // For dynamic queue, find front node
+            Optional<QueueNode> frontNodeOpt = nodeRepository.findBySessionIdAndUserIdAndIsFrontTrue(session.getSessionId(), session.getUserId());
             if (frontNodeOpt.isPresent()) {
                 QueueNode frontNode = frontNodeOpt.get();
                 result.put("success", true);
@@ -344,13 +359,11 @@ public class QueueService {
                 }
             }
         } else {
-            // For dynamic queue, traverse nodes from front to rear
-            if (!session.getNodeIds().isEmpty()) {
-                for (String nodeId : session.getNodeIds()) {
-                    Optional<QueueNode> nodeOpt = nodeRepository.findById(nodeId);
-                    if (nodeOpt.isPresent()) {
-                        elements.add(nodeOpt.get().getData());
-                    }
+            // For dynamic queue, traverse nodes from front to rear in order
+            if (session.getCurrentSize() > 0) {
+                List<QueueNode> orderedNodes = nodeRepository.findBySessionIdAndUserIdOrderByPosition(session.getSessionId(), session.getUserId());
+                for (QueueNode node : orderedNodes) {
+                    elements.add(node.getData());
                 }
             }
         }
