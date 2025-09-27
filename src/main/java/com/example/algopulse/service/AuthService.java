@@ -20,7 +20,7 @@ public class AuthService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public String registerUser(String username, String email, String password) {
+    public void registerUser(String username, String email, String password) {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
@@ -30,9 +30,7 @@ public class AuthService {
 
         String passwordHash = passwordEncoder.encode(password);
         User user = new User(username, email, passwordHash);
-        User savedUser = userRepository.save(user);
-
-        return jwtUtil.generateToken(savedUser.getId(), savedUser.getUsername());
+        userRepository.save(user);
     }
 
     public String loginUser(String usernameOrEmail, String password) {

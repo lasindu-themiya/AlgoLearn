@@ -62,11 +62,11 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
             }
             
-            String token = authService.registerUser(request.getUsername(), request.getEmail(), request.getPassword());
+            authService.registerUser(request.getUsername(), request.getEmail(), request.getPassword());
             response.put("success", true);
-            response.put("message", "User registered successfully");
-            response.put("token", token);
-            return ResponseEntity.ok(response);
+            response.put("message", "Account created successfully! Please login to continue.");
+            response.put("redirect", "login"); // Hint for frontend to redirect
+            return ResponseEntity.status(201).body(response); // Created status
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
@@ -107,7 +107,9 @@ public class AuthController {
             Map<String, Object> userResponse = new HashMap<>();
             userResponse.put("id", user.getId());
             userResponse.put("username", user.getUsername());  
-            userResponse.put("email", user.getEmail());            response.put("success", true);
+            userResponse.put("email", user.getEmail());
+            
+            response.put("success", true);
             response.put("message", "Login successful");
             response.put("token", token);
             response.put("user", userResponse);
