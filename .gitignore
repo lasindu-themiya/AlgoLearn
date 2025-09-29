@@ -141,4 +141,5 @@ Desktop.ini
 # Ignore any generated files
 gen/
 
+src/main/resources/application.properties
 # End of file
